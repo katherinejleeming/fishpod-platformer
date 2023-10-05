@@ -9,8 +9,8 @@ constexpr int DISPLAY_WIDTH{ 800 };
 constexpr int DISPLAY_HEIGHT{ 600 };
 constexpr int DISPLAY_SCALE{ 1 };
 
-const Vector2D FISHPOD_AABB{ 10.f, 20.f };
-//const Vector2D PLATFORM_AABB{ 48.f, 48.f };
+const Vector2D POD_AABB{ 10.f, 20.f };
+const Vector2D ROCK_AABB{ 10.f, 10.f };
 //const Vector2D PANSY_AABB{ 48.f, 48.f };
 //const Vector2D GOLD_AABB{ 48.f, 48.f };
 
@@ -18,7 +18,8 @@ void Draw();
 void UpdateFishPod();
 void FishPodGroundControls();
 void FishPodAirControls();
-void PlatformCollision();
+void FishPodStand();
+void RockPlatformCollision();
 void WallCollision();
 void PansyCollision();
 void GoldCollision();
@@ -28,6 +29,7 @@ void CreatePlatforms();
 enum FishPodState
 {
 	STATE_APPEAR,
+	STATE_STAND,
 	STATE_MOVE,
 	STATE_JUMP,
 	STATE_DEAD,
@@ -42,29 +44,61 @@ enum PlayState
 	STATE_GAMEOVER,
 };
 
-struct GameState
-{
-	float time{ 0 };
-	PlayState playState = STATE_START;
-	FishPodState fishState = STATE_APPEAR;
-};
-
-GameState gameState;
-
 enum GameObjectType
 {
 	TYPE_POD,
 	TYPE_GOLD,
 	TYPE_PANSY,
-	TYPE_ROCK,
-	TYPE_LAVA,
 };
+
+enum TileType
+{
+	TYPE_EMPTY = 0,
+	TYPE_ROCK = 1,
+	TYPE_LAVA = 2,
+};
+
+
+const int facingLeft = 1;
+const int facingRight = 2;
+int direction = facingLeft;
+
+
+struct GameState
+{
+	float time{ 0 };
+	PlayState playState = STATE_START;
+	FishPodState fishState = STATE_STAND;
+};
+
+GameState gameState;
+
 
 // The entry point for a PlayBuffer program
 void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 {
 	Play::CreateManager( DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_SCALE );
 	Play::LoadBackground("Data\\Backgrounds\\background.png");
+
+	int tileId;
+	const int width{ 5 };
+	const int height{ 5 };
+	int tileMap[] = {
+		0,0,0,0,0,
+		0,0,0,0,0,
+		0,0,0,1,0,
+		0,0,0,0,0,
+		1,1,1,1,1,
+	};
+
+	for (int x = 0; x < width; x++)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			tileId = tileMap[(y * width) + x];
+		}
+	}
+
 	Play::CreateGameObject(TYPE_POD, { DISPLAY_WIDTH / 2, 500 }, 20, "pod_stand_right");
 	Play::CentreAllSpriteOrigins();
 	Play::MoveSpriteOrigin("pod_stand_right", 0, 5);
@@ -72,7 +106,6 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 	Play::MoveSpriteOrigin("pod_walk_left", 0, 5);
 	Play::MoveSpriteOrigin("pod_walk_right", 0, 5);
 
-	
 }
 
 // Called by PlayBuffer every frame (60 times a second!)
@@ -83,7 +116,7 @@ bool MainGameUpdate( float elapsedTime )
 	switch (gameState.playState)
 	{
 		case STATE_START:
-			
+			CreatePlatforms();
 			if (Play::KeyPressed('P') == true)
 			{
 				gameState.playState = STATE_PLAY;
@@ -95,7 +128,7 @@ bool MainGameUpdate( float elapsedTime )
 		case STATE_PLAY:
 			UpdateFishPod();
 			CreatePlatforms();
-			PlatformCollision();
+			RockPlatformCollision();
 			PansyCollision();
 			GoldCollision();
 
@@ -138,15 +171,22 @@ void Draw()
 	Play::ClearDrawingBuffer(Play::cWhite);
 	Play::DrawBackground();
 
+	/*Play::DrawObject(Play::GetGameObjectByType(TYPE_ROCK));
+	GameObject& obj_rock = Play::GetGameObjectByType(TYPE_ROCK);
+
+	Play::DrawRect(obj_rock.pos - ROCK_AABB, obj_rock.pos + ROCK_AABB, Play::cGreen);*/
+
 	Play::DrawObject(Play::GetGameObjectByType(TYPE_POD));
 	GameObject& obj_pod = Play::GetGameObjectByType(TYPE_POD);
 
-	Play::DrawRect(obj_pod.pos - FISHPOD_AABB, obj_pod.pos + FISHPOD_AABB, Play::cWhite); // bounding box visual
+	Play::DrawRect(obj_pod.pos - POD_AABB, obj_pod.pos + POD_AABB, Play::cWhite); // bounding box visual
+
+
 
 	if (gameState.playState == STATE_START)
 	{
 		Play::DrawFontText("64px", "COLLECT THE GOLD AND AVOID THE PANSIES",
-			{ DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - 50 }, Play::CENTRE);
+			{ DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2 }, Play::CENTRE);
 		Play::DrawFontText("64px", "PRESS P TO PLAY",
 			{ DISPLAY_WIDTH / 2,  50 }, Play::CENTRE);
 	}
@@ -154,7 +194,7 @@ void Draw()
 	if (gameState.playState == STATE_PLAY)
 	{
 		Play::DrawFontText("64px", "LEFT AND RIGHT TO MOVE, SPACE TO JUMP",
-			{ DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - 50 }, Play::CENTRE);
+			{ DISPLAY_WIDTH / 2,  50 }, Play::CENTRE);
 	}
 
 	if (gameState.playState == STATE_WIN)
@@ -178,8 +218,9 @@ void UpdateFishPod()
 
 	switch (gameState.fishState)
 	{
-		case STATE_APPEAR:
-
+		case STATE_STAND:
+			FishPodStand();
+			
 			break;
 
 		case STATE_MOVE:
@@ -201,6 +242,8 @@ void UpdateFishPod()
 
 			break;
 	}
+
+	Play::UpdateGameObject(obj_pod);
 }
 
 void FishPodGroundControls()
@@ -209,31 +252,39 @@ void FishPodGroundControls()
 	
 	if (Play::KeyDown(VK_LEFT))
 	{
-		obj_pod.pos.x -= 3;
+		obj_pod.pos.x -= 1;
 		Play::SetSprite(obj_pod, "pod_walk_left", 0.25f);
 	}
 
-	else if (Play::KeyDown(VK_RIGHT))
+	else if (Play::IsAnimationComplete(obj_pod))
 	{
-		obj_pod.pos.x += 3;
+		obj_pod.animSpeed = 0;
+	}
+
+	if (Play::KeyDown(VK_RIGHT))
+	{
+		obj_pod.pos.x += 1;
 		Play::SetSprite(obj_pod, "pod_walk_right", 0.25f);
 
 	}
 
-	else
+	else if (Play::IsAnimationComplete(obj_pod))
 	{
-		Play::SetSprite(obj_pod, "pod_stand_right", 0);
-		obj_pod.animSpeed = 0.f;
+		obj_pod.animSpeed = 0;
 	}
 
 
 	if (Play::KeyDown(VK_SPACE))
 	{
-		
 		gameState.fishState = STATE_JUMP;
 	}
-	 
 
+	if (!Play::KeyDown(VK_LEFT) && !Play::KeyDown(VK_RIGHT))
+	{
+		gameState.fishState = STATE_STAND;
+	}
+	 
+	
 }
 
 void FishPodAirControls()
@@ -242,16 +293,14 @@ void FishPodAirControls()
 
 	if (Play::KeyDown(VK_LEFT))
 	{
-		obj_pod.pos.x -= 3; 
-		Play::SetSprite(obj_pod, "pod_jump_left", 0);
-		obj_pod.animSpeed = 0.25f;
+		obj_pod.pos.x -= 3;
+		Play::SetSprite(obj_pod, "pod_jump_left", 0.25f);
 	}
 
 	else if (Play::KeyDown(VK_RIGHT))
 	{
 		obj_pod.pos.x += 3;
-		Play::SetSprite(obj_pod, "pod_jump_right", 0);
-		obj_pod.animSpeed = 0.25f;
+		Play::SetSprite(obj_pod, "pod_jump_right", 0.25f);
 
 	}
 
@@ -259,15 +308,69 @@ void FishPodAirControls()
 
 }
 
+void FishPodStand()
+{
+	GameObject& obj_pod { Play::GetGameObjectByType(TYPE_POD) };
+
+	if (Play::KeyPressed(VK_LEFT))
+	{
+		direction = facingLeft;
+	}
+	if (Play::KeyPressed(VK_RIGHT))
+	{
+		direction = facingRight;
+	}
+
+	if (direction == facingLeft)
+	{
+		Play::SetSprite(obj_pod, "pod_stand_left", 0.25f);
+	}
+	if (direction == facingRight)
+	{
+		Play::SetSprite(obj_pod, "pod_stand_right", 0.25f);
+	}
+
+	if (Play::KeyDown(VK_LEFT) || Play::KeyDown(VK_RIGHT))
+	{
+		gameState.fishState = STATE_MOVE;
+	}
+}
 
 void CreatePlatforms()
 {
 
 }
 
-void PlatformCollision()
+void RockPlatformCollision()
 {
+	//GameObject& rock_obj(Play::CollectGameObjectIDsByType(TYPE_ROCK));
+	//GameObject& obj_pod(Play::GetGameObjectByType(TYPE_POD));
 
+	//bool Collision = false;
+
+	//if (obj_pod.pos.y + POD_AABB.y > rock_obj.pos.y - ROCK_AABB.y
+	//	&& obj_pod.pos.y - POD_AABB.y < rock_obj.pos.y + ROCK_AABB.y)
+	//{
+	//	if (obj_pod.pos.x + POD_AABB.x > rock_obj.pos.x - ROCK_AABB.x
+	//		&& obj_pod.pos.x - POD_AABB.x < rock_obj.pos.x + ROCK_AABB.x)
+	//	{
+	///*		if (obj_pod.oldPos.x < rock_obj.pos.x - ROCK_AABB.x || obj_pod.oldPos.x > rock_obj.pos.x + ROCK_AABB.x)
+	//		{
+	//			
+	//		}
+
+	//		else
+	//		{
+	//			
+	//		}*/
+
+	//		Collision = true;
+	//	}
+
+	//	Play::UpdateGameObject(obj_pod);
+	//}
+
+	
 }
 
 
