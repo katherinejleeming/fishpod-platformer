@@ -9,8 +9,11 @@ constexpr int DISPLAY_WIDTH{ 800 };
 constexpr int DISPLAY_HEIGHT{ 600 };
 constexpr int DISPLAY_SCALE{ 1 };
 
-const Vector2D POD_AABB{ 10.f, 20.f };
-const Vector2D ROCK_AABB{ 10.f, 10.f };
+const Point2f POD_START_POS = { DISPLAY_WIDTH / 2, 500 };
+const int facingLeft = 1;
+const int facingRight = 2;
+int direction = facingLeft;
+
 //const Vector2D PANSY_AABB{ 48.f, 48.f };
 //const Vector2D GOLD_AABB{ 48.f, 48.f };
 
@@ -23,15 +26,14 @@ void RockPlatformCollision();
 void WallCollision();
 void PansyCollision();
 void GoldCollision();
-void CreatePlatforms();
 
 
 enum FishPodState
 {
-	STATE_APPEAR,
 	STATE_STAND,
 	STATE_MOVE,
 	STATE_JUMP,
+	STATE_FALL,
 	STATE_DEAD,
 };
 
@@ -47,25 +49,31 @@ enum PlayState
 enum GameObjectType
 {
 	TYPE_POD,
+	TYPE_PLATFORM,
 	TYPE_GOLD,
 	TYPE_PANSY,
 };
 
-enum TileType
+
+struct Tile
 {
-	TYPE_EMPTY = 0,
-	TYPE_ROCK_BEGIN = 1,
-	TYPE_ROCK_MIDDLE = 2,
-	TYPE_ROCK_END = 3,
-	TYPE_LAVA_BEGIN = 4,
-	TYPE_LAVA_MIDDLE = 5,
-	TYPE_LAVA_END = 6,
+	const int TILE_HEIGHT = 32;
+	const int TILE_WIDTH = 32;
+	int tileSpacingWidth = 32;
+	int tileSpacingHeight = 32;
+	const Vector2D TILE_AABB{ 32.f, 32.f };
 };
 
+Tile obj_tile;
 
-const int facingLeft = 1;
-const int facingRight = 2;
-int direction = facingLeft;
+
+struct FishPod
+{
+	const Vector2D POD_AABB{ 10.f, 20.f };
+	Point2f podPos{ POD_START_POS };
+};
+
+FishPod fishpod;
 
 
 struct GameState
@@ -84,15 +92,31 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 	Play::CreateManager( DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_SCALE );
 	Play::LoadBackground("Data\\Backgrounds\\background.png");
 
+	//setting up a 1D array for tiles
 	int tileId;
-	const int width{ 5 };
-	const int height{ 5 };
+	const int width{ 26 };
+	const int height{ 19 };
+	const int size = width * height;
 	int tileMap[] = {
-		0,0,0,0,0,
-		0,0,0,0,0,
-		0,0,0,1,0,
-		0,0,0,0,0,
-		1,1,1,1,1,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	};
 
 	for (int x = 0; x < width; x++)
@@ -100,10 +124,40 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 		for (int y = 0; y < height; y++)
 		{
 			tileId = tileMap[(y * width) + x];
+			switch (tileId)
+			{
+			case 1:
+				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "rock_begin");
+				break;
+
+			case 2:
+				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "rock_middle");
+				break;
+
+			case 3:
+				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "rock_end");
+				break;
+
+			case 4:
+				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "lava_begin");
+				break;
+
+			case 5:
+				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "lava_middle");
+				break;
+
+			case 6:
+				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "lava_end");
+				break;
+
+			default:
+
+				break;
+			}
 		}
 	}
 
-	Play::CreateGameObject(TYPE_POD, { DISPLAY_WIDTH / 2, 500 }, 20, "pod_stand_right");
+	Play::CreateGameObject(TYPE_POD, { fishpod.podPos }, 20, "pod_stand_right");
 	Play::CentreAllSpriteOrigins();
 	Play::MoveSpriteOrigin("pod_stand_right", 0, 5);
 	Play::MoveSpriteOrigin("pod_stand_left", 0, 5);
@@ -116,22 +170,24 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 bool MainGameUpdate( float elapsedTime )
 {
 	gameState.time += elapsedTime;
+	GameObject& obj_pod = Play::GetGameObjectByType(TYPE_POD);
+
 
 	switch (gameState.playState)
 	{
 		case STATE_START:
-			CreatePlatforms();
 			if (Play::KeyPressed('P') == true)
 			{
+				obj_pod.pos = { POD_START_POS };
 				gameState.playState = STATE_PLAY;
 				gameState.fishState = STATE_MOVE;
+				Play::StartAudioLoop("thunder");
 			}
 
 			break;
 
 		case STATE_PLAY:
 			UpdateFishPod();
-			CreatePlatforms();
 			RockPlatformCollision();
 			PansyCollision();
 			GoldCollision();
@@ -175,16 +231,19 @@ void Draw()
 	Play::ClearDrawingBuffer(Play::cWhite);
 	Play::DrawBackground();
 
-	/*Play::DrawObject(Play::GetGameObjectByType(TYPE_ROCK));
-	GameObject& obj_rock = Play::GetGameObjectByType(TYPE_ROCK);
-
-	Play::DrawRect(obj_rock.pos - ROCK_AABB, obj_rock.pos + ROCK_AABB, Play::cGreen);*/
+	//draw platforms
+	std::vector<int> platform_id = Play::CollectGameObjectIDsByType(TYPE_PLATFORM);
+	for (int i : platform_id)
+	{
+		GameObject& platform = Play::GetGameObject(i);
+		Play::DrawObject(platform);
+	}
 
 	Play::DrawObject(Play::GetGameObjectByType(TYPE_POD));
-	GameObject& obj_pod = Play::GetGameObjectByType(TYPE_POD);
+	GameObject& FishPod{ Play::GetGameObjectByType(TYPE_POD) };
 
-	Play::DrawRect(obj_pod.pos - POD_AABB, obj_pod.pos + POD_AABB, Play::cWhite); // bounding box visual
-
+	//Play::DrawRect(fishpod.podPos - fishpod.POD_AABB, fishpod.podPos + fishpod.POD_AABB, Play::cWhite); // bounding box visual
+	
 
 
 	if (gameState.playState == STATE_START)
@@ -224,7 +283,8 @@ void UpdateFishPod()
 	{
 		case STATE_STAND:
 			FishPodStand();
-			
+			WallCollision();
+
 			break;
 
 		case STATE_MOVE:
@@ -236,6 +296,10 @@ void UpdateFishPod()
 		case STATE_JUMP:
 			FishPodAirControls();
 			WallCollision();
+
+			break;
+
+		case STATE_FALL:
 
 			break;
 
@@ -257,20 +321,22 @@ void FishPodGroundControls()
 	if (Play::KeyDown(VK_LEFT))
 	{
 		obj_pod.pos.x -= 1;
-		Play::SetSprite(obj_pod, "pod_walk_left", 0.25f);
+		Play::SetSprite(obj_pod, "pod_walk_left", 0.75f);
 	}
 
-	else if (Play::IsAnimationComplete(obj_pod))
-	{
-		obj_pod.animSpeed = 0;
-	}
 
 	if (Play::KeyDown(VK_RIGHT))
 	{
 		obj_pod.pos.x += 1;
-		Play::SetSprite(obj_pod, "pod_walk_right", 0.25f);
+		Play::SetSprite(obj_pod, "pod_walk_right", 0.75f);
 
 	}
+
+	/*if (Play::IsAnimationComplete(obj_pod))
+	{
+		Play::PlayAudio("walk");
+	}*/
+
 
 	if (Play::KeyDown(VK_SPACE))
 	{
@@ -308,6 +374,7 @@ void FishPodAirControls()
 
 void FishPodStand()
 {
+	
 	GameObject& obj_pod { Play::GetGameObjectByType(TYPE_POD) };
 
 	if (Play::KeyPressed(VK_LEFT))
@@ -334,43 +401,41 @@ void FishPodStand()
 	}
 }
 
-void CreatePlatforms()
-{
-
-}
-
 void RockPlatformCollision()
 {
-	//GameObject& rock_obj(Play::CollectGameObjectIDsByType(TYPE_ROCK));
-	//GameObject& obj_pod(Play::GetGameObjectByType(TYPE_POD));
+	GameObject& obj_pod(Play::GetGameObjectByType(TYPE_POD));
+	std::vector<int> vPlatforms = Play::CollectGameObjectIDsByType(TYPE_PLATFORM);
 
-	//bool Collision = false;
+	for (int i : vPlatforms)
+	{
+		GameObject& obj_platform = Play::GetGameObject(i);
 
-	//if (obj_pod.pos.y + POD_AABB.y > rock_obj.pos.y - ROCK_AABB.y
-	//	&& obj_pod.pos.y - POD_AABB.y < rock_obj.pos.y + ROCK_AABB.y)
-	//{
-	//	if (obj_pod.pos.x + POD_AABB.x > rock_obj.pos.x - ROCK_AABB.x
-	//		&& obj_pod.pos.x - POD_AABB.x < rock_obj.pos.x + ROCK_AABB.x)
-	//	{
-	///*		if (obj_pod.oldPos.x < rock_obj.pos.x - ROCK_AABB.x || obj_pod.oldPos.x > rock_obj.pos.x + ROCK_AABB.x)
-	//		{
-	//			
-	//		}
+		bool Collision = false;
 
-	//		else
-	//		{
-	//			
-	//		}*/
+		if (obj_pod.pos.y + fishpod.POD_AABB.y > obj_platform.pos.y - obj_tile.TILE_AABB.y
+			&& obj_pod.pos.y - fishpod.POD_AABB.y < obj_platform.pos.y + obj_tile.TILE_AABB.y)
+		{
+			if (obj_pod.pos.x + fishpod.POD_AABB.x > obj_platform.pos.x - obj_tile.TILE_AABB.x
+				&& obj_pod.pos.x - fishpod.POD_AABB.x < obj_platform.pos.x + obj_tile.TILE_AABB.y)
+			{
+				if (obj_pod.oldPos.x < obj_platform.pos.x - obj_tile.TILE_AABB.x || obj_pod.oldPos.x > obj_platform.pos.x + obj_tile.TILE_AABB.x)
+				{
 
-	//		Collision = true;
-	//	}
+				}
 
-	//	Play::UpdateGameObject(obj_pod);
-	//}
+				else
+				{
 
+				}
+
+				Collision = true;
+			}
+
+			//Play::UpdateGameObject(obj_pod);
+		}
+	}
 	
 }
-
 
 void PansyCollision()
 {
