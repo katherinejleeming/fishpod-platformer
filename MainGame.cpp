@@ -54,8 +54,12 @@ enum GameObjectType
 enum TileType
 {
 	TYPE_EMPTY = 0,
-	TYPE_ROCK = 1,
-	TYPE_LAVA = 2,
+	TYPE_ROCK_BEGIN = 1,
+	TYPE_ROCK_MIDDLE = 2,
+	TYPE_ROCK_END = 3,
+	TYPE_LAVA_BEGIN = 4,
+	TYPE_LAVA_MIDDLE = 5,
+	TYPE_LAVA_END = 6,
 };
 
 
@@ -267,12 +271,6 @@ void FishPodGroundControls()
 		Play::SetSprite(obj_pod, "pod_walk_right", 0.25f);
 
 	}
-
-	else if (Play::IsAnimationComplete(obj_pod))
-	{
-		obj_pod.animSpeed = 0;
-	}
-
 
 	if (Play::KeyDown(VK_SPACE))
 	{
