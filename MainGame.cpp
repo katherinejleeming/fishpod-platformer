@@ -9,19 +9,22 @@ constexpr int DISPLAY_WIDTH{ 800 };
 constexpr int DISPLAY_HEIGHT{ 600 };
 constexpr int DISPLAY_SCALE{ 1 };
 
-const Point2f POD_START_POS = { DISPLAY_WIDTH / 2, 530 };
+const Point2f POD_START_POS = { 150, 530 };
 const int facingLeft = 1;
 const int facingRight = 2;
 int direction = facingLeft;
 const float gravity{ 0.3f };
 const Vector2D FISHPOD_JUMP_LEFT_VELOCITY{ -3, -9 };
 const Vector2D FISHPOD_JUMP_RIGHT_VELOCITY{ 3, -9 };
-const Vector2D TILE_AABB{ 32.f, 10.f };
+const Vector2D TILE_AABB{ 16.f, 10.f };
+const Vector2D TILE_BEGIN_AABB{ 16.f, 10.f };
+const Vector2D TILE_END_AABB{ 16.f, 10.f };
 const Vector2D POD_AABB{ 10.f, 20.f };
 const Vector2D PANSY_AABB{ 10.f, 15.f };
 const Vector2D GOLD_AABB{ 14.f, 14.f };
 
 void Draw();
+void DrawUI();
 void UpdateFishPod();
 void FishPodGroundControls();
 void FishPodAirControls();
@@ -54,7 +57,9 @@ enum PlayState
 enum GameObjectType
 {
 	TYPE_POD,
+	TYPE_PLATFORM_BEGIN,
 	TYPE_PLATFORM,
+	TYPE_PLATFORM_END,
 	TYPE_GOLD,
 	TYPE_PANSY,
 	TYPE_DESTROYED,
@@ -65,9 +70,6 @@ struct Tile
 {
 	const int TILE_HEIGHT = 32;
 	const int TILE_WIDTH = 32;
-	int tileSpacingWidth = 32;
-	int tileSpacingHeight = 32;
-	
 };
 
 Tile obj_tile;
@@ -121,7 +123,7 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 		0,0,0,0,0,0,0,1,2,2,2,2,2,2,3,0,0,0,0,8,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,2,3,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-		1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,0,
+		4,5,6,2,2,2,2,2,2,2,2,4,5,5,5,6,2,2,2,2,2,2,2,2,2,3,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	};
 
@@ -133,35 +135,35 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 			switch (tileId)
 			{
 			case 1:
-				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "rock_begin");
+				Play::CreateGameObject(TYPE_PLATFORM_BEGIN, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "rock_begin");
 				break;
 
 			case 2:
-				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "rock_middle");
+				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "rock_middle");
 				break;
 
 			case 3:
-				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "rock_end");
+				Play::CreateGameObject(TYPE_PLATFORM_END, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "rock_end");
 				break;
 
 			case 4:
-				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "lava_begin");
+				Play::CreateGameObject(TYPE_PLATFORM_BEGIN, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "lava_begin");
 				break;
 
 			case 5:
-				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "lava_middle");
+				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "lava_middle");
 				break;
 
 			case 6:
-				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "lava_end");
+				Play::CreateGameObject(TYPE_PLATFORM_END, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "lava_end");
 				break;
 
 			case 7:
-				Play::CreateGameObject(TYPE_PANSY, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "pansy");
+				Play::CreateGameObject(TYPE_PANSY, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "pansy");
 				break;
 
 			case 8:
-				Play::CreateGameObject(TYPE_GOLD, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 20, "gold");
+				Play::CreateGameObject(TYPE_GOLD, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "gold");
 				break;
 
 			default:
@@ -171,12 +173,13 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 		}
 	}
 
-	Play::CreateGameObject(TYPE_POD, { fishpod.podPos }, 20, "pod_stand_right");
+	Play::CreateGameObject(TYPE_POD, { fishpod.podPos }, 20, "pod_stand_left");
 	Play::CentreAllSpriteOrigins();
 	Play::MoveSpriteOrigin("pod_stand_right", 0, 5);
 	Play::MoveSpriteOrigin("pod_stand_left", 0, 5);
 	Play::MoveSpriteOrigin("pod_walk_left", 0, 5);
 	Play::MoveSpriteOrigin("pod_walk_right", 0, 5);
+	
 
 }
 
@@ -202,7 +205,6 @@ bool MainGameUpdate( float elapsedTime )
 
 		case STATE_PLAY:
 			UpdateFishPod();
-			RockPlatformCollision();
 			PansyCollision();
 			GoldUpdate();
 			GoldCollision();
@@ -247,14 +249,31 @@ void Draw()
 	Play::DrawBackground();
 
 	//draw platforms
-	std::vector<int> platform_id = Play::CollectGameObjectIDsByType(TYPE_PLATFORM);
-	for (int i : platform_id)
+	std::vector<int> vPlatformsMid = Play::CollectGameObjectIDsByType(TYPE_PLATFORM);
+	for (int i : vPlatformsMid)
 	{
-		GameObject& platform = Play::GetGameObject(i);
-		Play::DrawObject(platform);
-		Play::DrawRect(platform.pos - TILE_AABB, platform.pos + TILE_AABB, Play::cGreen);
+		GameObject& platformMid = Play::GetGameObject(i);
+		Play::DrawObject(platformMid);
+		Play::DrawRect(platformMid.pos - TILE_AABB, platformMid.pos + TILE_AABB, Play::cGreen);
 	}
 
+	std::vector<int> vPlatformsBegin = Play::CollectGameObjectIDsByType(TYPE_PLATFORM_BEGIN);
+	for (int i : vPlatformsBegin)
+	{
+		GameObject& platformBegin = Play::GetGameObject(i);
+		Play::DrawObject(platformBegin);
+		Play::DrawRect(platformBegin.pos - TILE_BEGIN_AABB, platformBegin.pos + TILE_BEGIN_AABB, Play::cOrange);
+	}
+
+	std::vector<int> vPlatformsEnd = Play::CollectGameObjectIDsByType(TYPE_PLATFORM_END);
+	for (int i : vPlatformsEnd)
+	{
+		GameObject& platformEnd = Play::GetGameObject(i);
+		Play::DrawObject(platformEnd);
+		Play::DrawRect(platformEnd.pos - TILE_END_AABB, platformEnd.pos + TILE_END_AABB, Play::cOrange);
+	}
+
+	//draw other objs
 	std::vector<int> pansy_id = Play::CollectGameObjectIDsByType(TYPE_PANSY);
 	for (int j : pansy_id)
 	{
@@ -271,42 +290,46 @@ void Draw()
 		Play::DrawRect(gold.pos - GOLD_AABB, gold.pos + GOLD_AABB, Play::cRed);
 	}
 
+	//draw pod
 	Play::DrawObject(Play::GetGameObjectByType(TYPE_POD));
 	GameObject& obj_pod{ Play::GetGameObjectByType(TYPE_POD) };
-
 	Play::DrawRect(obj_pod.pos - POD_AABB, obj_pod.pos + POD_AABB, Play::cWhite); // bounding box visual
-	
-	
 
-	if (gameState.playState == STATE_START)
-	{
-		Play::DrawFontText("64px", "COLLECT THE GOLD AND AVOID THE PANSIES",
-			{ DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2 }, Play::CENTRE);
-		Play::DrawFontText("64px", "PRESS P TO PLAY",
-			{ DISPLAY_WIDTH / 2,  50 }, Play::CENTRE);
-	}
-
-	if (gameState.playState == STATE_PLAY)
-	{
-		Play::DrawFontText("64px", "LEFT AND RIGHT TO MOVE, SPACE TO JUMP",
-			{ DISPLAY_WIDTH / 2,  50 }, Play::CENTRE);
-		Play::DrawFontText("64px", "Collision: " + std::to_string(gameState.collision),
-			{ 100,  DISPLAY_HEIGHT / 2 }, Play::CENTRE);
-	}
-
-	if (gameState.playState == STATE_WIN)
-	{
-		Play::DrawFontText("64px", "YOU WON! PLAY AGAIN? PRESS P TO PLAY AGAIN", { DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2 }, Play::CENTRE);
-	}
-
-	if (gameState.playState == STATE_GAMEOVER)
-	{
-		Play::DrawFontText("105px", "GAME OVER :(", { DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2 }, Play::CENTRE);
-		Play::DrawFontText("64px", "PLAY AGAIN? PRESS R TO RESTART", { DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - 50 }, Play::CENTRE);
-	}
-
+	DrawUI();
 
 	Play::PresentDrawingBuffer();
+}
+
+void DrawUI()
+{
+	switch (gameState.playState)
+	{
+		case STATE_START:
+			Play::DrawFontText("64px", "COLLECT THE GOLD AND AVOID THE PANSIES",
+				{ DISPLAY_WIDTH / 2, 400 }, Play::CENTRE);
+			Play::DrawFontText("64px", "PRESS P TO PLAY",
+				{ DISPLAY_WIDTH / 2,  350 }, Play::CENTRE);
+			break;
+
+		case STATE_PLAY:
+			Play::DrawFontText("64px", "LEFT AND RIGHT TO MOVE, SPACE TO JUMP",
+					{ DISPLAY_WIDTH / 2,  50 }, Play::CENTRE);
+			Play::DrawFontText("64px", "Collision: " + std::to_string(gameState.collision),
+					{ 100,  DISPLAY_HEIGHT / 2 }, Play::CENTRE);
+			break;
+
+		case STATE_WIN:
+			Play::DrawFontText("64px", "YOU WON! PLAY AGAIN? PRESS P TO PLAY AGAIN",
+				{ DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2 }, Play::CENTRE);
+			break;
+
+		case STATE_GAMEOVER:
+			Play::DrawFontText("105px", "GAME OVER :(", 
+				{ DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2 }, Play::CENTRE);
+			Play::DrawFontText("64px", "PLAY AGAIN? PRESS R TO RESTART", 
+				{ DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - 50 }, Play::CENTRE);
+			break;
+	}
 }
 
 void UpdateFishPod()
@@ -316,12 +339,14 @@ void UpdateFishPod()
 	switch (gameState.fishState)
 	{
 		case STATE_STAND:
+			RockPlatformCollision();
 			FishPodStand();
 			WallCollision();
 
 			break;
 
 		case STATE_MOVE:
+			RockPlatformCollision();
 			FishPodGroundControls();
 			WallCollision();
 			GoldCollision();
@@ -329,7 +354,6 @@ void UpdateFishPod()
 			break;
 
 		case STATE_JUMP:
-			obj_pod.acceleration.y = gravity;
 			FishPodAirControls();
 			WallCollision();
 			GoldCollision();
@@ -338,6 +362,7 @@ void UpdateFishPod()
 
 		case STATE_FALL:
 			obj_pod.acceleration.y = gravity;
+			RockPlatformCollision();
 			FishPodAirControls();
 			WallCollision();
 			GoldCollision();
@@ -357,7 +382,9 @@ void UpdateFishPod()
 void FishPodGroundControls()
 {
 	GameObject& obj_pod = Play::GetGameObjectByType(TYPE_POD);
-	
+	obj_pod.velocity.y = 0;
+	obj_pod.acceleration.y = 0;
+
 	if (Play::KeyDown(VK_LEFT))
 	{
 		obj_pod.pos.x -= 1;
@@ -388,6 +415,8 @@ void FishPodAirControls()
 {
 	GameObject& obj_pod = Play::GetGameObjectByType(TYPE_POD);
 
+	
+
 	if (Play::KeyPressed(VK_LEFT))
 	{
 		direction = facingLeft;
@@ -397,15 +426,14 @@ void FishPodAirControls()
 		direction = facingRight;
 	}
 
-	if (direction == facingLeft && Play::KeyPressed(VK_SPACE))
+	if (direction == facingLeft && Play::KeyDown(VK_SPACE))
 	{
 		obj_pod.velocity = { FISHPOD_JUMP_LEFT_VELOCITY };
 		Play::SetSprite(obj_pod, "pod_jump_left", 0.75f);
 		gameState.fishState = STATE_FALL;
-
 	}
 
-	if (direction == facingRight && Play::KeyPressed(VK_SPACE))
+	if (direction == facingRight && Play::KeyDown(VK_SPACE))
 	{
 		obj_pod.velocity = { FISHPOD_JUMP_RIGHT_VELOCITY }; 
 		Play::SetSprite(obj_pod, "pod_jump_right", 0.75f);
@@ -419,6 +447,8 @@ void FishPodStand()
 {
 	
 	GameObject& obj_pod { Play::GetGameObjectByType(TYPE_POD) };
+	obj_pod.velocity.y = 0;
+	obj_pod.acceleration.y = 0;
 
 	if (Play::KeyPressed(VK_LEFT))
 	{
@@ -448,41 +478,25 @@ bool RockPlatformCollision()
 {
 	bool Collision = false;
 
-	return Collision;
+	GameObject& obj_pod(Play::GetGameObjectByType(TYPE_POD));
+	std::vector<int> vPlatforms = Play::CollectGameObjectIDsByType(TYPE_PLATFORM);
 
-	//GameObject& obj_pod(Play::GetGameObjectByType(TYPE_POD));
-	//std::vector<int> vPlatforms = Play::CollectGameObjectIDsByType(TYPE_PLATFORM);
+	for (int i : vPlatforms)
+	{
+		GameObject& obj_platform = Play::GetGameObject(i);
 
-	//for (int i : vPlatforms)
-	//{
-	//	GameObject& obj_platform = Play::GetGameObject(i);
+			if (obj_pod.pos.x + POD_AABB.x > obj_platform.pos.x - TILE_AABB.x
+				&& obj_pod.pos.x - POD_AABB.x < obj_platform.pos.x + TILE_AABB.x)
+			{
+				gameState.collision = true;
+				obj_pod.velocity.y = 0;
+				obj_pod.acceleration.y = 0;
+				Collision = true;
+			}
 
-	//	bool Collision = false;
-
-	//	if (obj_pod.pos.y + POD_AABB.y > obj_platform.pos.y - TILE_AABB.y
-	//		&& obj_pod.pos.y - POD_AABB.y < obj_platform.pos.y + TILE_AABB.y)
-	//	{
-	//		if (obj_pod.pos.x + POD_AABB.x > obj_platform.pos.x - TILE_AABB.x
-	//			&& obj_pod.pos.x - POD_AABB.x < obj_platform.pos.x + TILE_AABB.y)
-	//		{
-	//			if (obj_pod.oldPos.x < obj_platform.pos.x - TILE_AABB.x || obj_pod.oldPos.x > obj_platform.pos.x + TILE_AABB.x)
-	//			{
-
-	//			}
-
-	//			else
-	//			{
-
-	//			}
-
-	//			Collision = true;
-	//		}
-
-	//		return true;
-	//		//Play::UpdateGameObject(obj_pod);
-	//	}
-	//}
+	}
 	
+	return Collision;
 }
 
 bool PansyCollision()
@@ -500,7 +514,6 @@ void GoldUpdate()
 	{
 		GameObject& obj_gold = Play::GetGameObject(i);
 		Play::SetSprite(obj_gold, "gold", 0.25f);
-		
 		Play::UpdateGameObject(obj_gold);
 	}
 }
@@ -517,24 +530,25 @@ bool GoldCollision()
 		GameObject& obj_gold = Play::GetGameObject(i);
 
 
-		if (obj_pod.pos.y + POD_AABB.y > obj_gold.pos.y - GOLD_AABB.y
+		if (obj_pod.pos.y + POD_AABB.y > obj_gold.pos.y - GOLD_AABB.y 
 			&& obj_pod.pos.y - POD_AABB.y < obj_gold.pos.y + GOLD_AABB.y)
 		{
-			if (obj_pod.pos.x + POD_AABB.x > obj_gold.pos.x - GOLD_AABB.x
+			if (obj_pod.pos.x + POD_AABB.x > obj_gold.pos.x - GOLD_AABB.x 
 				&& obj_pod.pos.x - POD_AABB.x < obj_gold.pos.x + GOLD_AABB.x)
 			{
-					gameState.collision = true;
 					obj_gold.type = TYPE_DESTROYED;
 					Play::PlayAudio("gold");
-
-				Collision = true;
+					Collision = true;
 			}
 
 		}
 
 		Play::UpdateGameObject(Play::GetGameObject(i));
-		return Collision;
+
 	}
+
+		return Collision;
+
 }
 
 void WallCollision()
