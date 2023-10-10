@@ -9,7 +9,7 @@ constexpr int DISPLAY_WIDTH{ 800 };
 constexpr int DISPLAY_HEIGHT{ 600 };
 constexpr int DISPLAY_SCALE{ 1 };
 
-const Point2f POD_START_POS{ 150, 530 };
+const Point2f POD_START_POS{ 150, 400 };
 const int facingLeft{ 1 };
 const int facingRight{ 2 };
 int direction{ facingLeft };
@@ -17,25 +17,27 @@ const float gravity{ 0.5f };
 const Vector2D FISHPOD_JUMP_LEFT_VELOCITY{ -3, -12 };
 const Vector2D FISHPOD_JUMP_RIGHT_VELOCITY{ 3, -12 };
 const Vector2D TILE_AABB{ 16.f, 10.f };
-const Vector2D TILE_BEGIN_AABB{ 10.f, 10.f };
-const Vector2D TILE_END_AABB{ 10.f, 10.f };
-const Vector2D AABB_ORIGIN{ 5.f,0.f };
-const Vector2D POD_AABB{ 10.f, 20.f };
+const Vector2D TILE_BEGIN_AABB{ 5.f, 10.f };
+const Vector2D TILE_END_AABB{ 5.f, 10.f };
+const Vector2D AABB_ORIGIN{ 10.f,0.f };
+const Vector2D POD_AABB{ 10.f, 16.f };
 const Vector2D PANSY_AABB{ 10.f, 15.f };
 const Vector2D GOLD_AABB{ 14.f, 14.f };
 
 void Draw();
 void DrawUI();
 void UpdateFishPod();
-void FishPodGroundControls();
+void FishPodMove();
 void FishPodStand();
 void FishPodJump();
+void FishPodFall();
 bool RockPlatformCollision();
 void WallCollision();
 bool PansyCollision();
 void GoldUpdate();
 bool GoldCollision();
 bool LavaCollision();
+void UpdateDestroyed();
 
 
 enum FishPodState
@@ -50,7 +52,6 @@ enum FishPodState
 enum PlayState
 {
 	STATE_START,
-	STATE_PAUSE,
 	STATE_PLAY,
 	STATE_WIN,
 	STATE_GAMEOVER,
@@ -89,6 +90,7 @@ FishPod fishpod;
 struct GameState
 {
 	float time{ 0 };
+	float gold{ 4 };
 	bool collision{ false };
 	PlayState playState{ STATE_START };
 	FishPodState fishState{ STATE_STAND };
@@ -190,7 +192,6 @@ bool MainGameUpdate( float elapsedTime )
 	gameState.time += elapsedTime;
 	GameObject& obj_pod = Play::GetGameObjectByType(TYPE_POD);
 
-
 	switch (gameState.playState)
 	{
 		case STATE_START:
@@ -198,8 +199,8 @@ bool MainGameUpdate( float elapsedTime )
 			if (Play::KeyPressed('P') == true)
 			{
 				gameState.playState = STATE_PLAY;
-				gameState.fishState = STATE_MOVE;
-				obj_pod.pos = { POD_START_POS };
+				gameState.fishState = STATE_FALL;
+				obj_pod.velocity = { 0,0 };
 				Play::StartAudioLoop("thunder");
 			}
 
@@ -210,15 +211,11 @@ bool MainGameUpdate( float elapsedTime )
 			PansyCollision();
 			GoldUpdate();
 			GoldCollision();
-
-			break;
-
-		case STATE_PAUSE:
-
+			UpdateDestroyed();
 			break;
 
 		case STATE_WIN:
-
+			Play::StopAudioLoop("thunder");
 			break;
 
 		case STATE_GAMEOVER:
@@ -226,6 +223,7 @@ bool MainGameUpdate( float elapsedTime )
 			Play::StopAudioLoop("thunder");
 			if (Play::KeyPressed('R') == true)
 			{
+				obj_pod.pos = { POD_START_POS };
 				gameState.playState = STATE_START;
 			}
 
@@ -251,13 +249,6 @@ void Draw()
 	Play::DrawBackground();
 
 	//draw platforms
-	std::vector<int> vPlatformsMid = Play::CollectGameObjectIDsByType(TYPE_PLATFORM);
-	for (int i : vPlatformsMid)
-	{
-		GameObject& platformMid = Play::GetGameObject(i);
-		Play::DrawObject(platformMid);
-		//Play::DrawRect(platformMid.pos - TILE_AABB, platformMid.pos + TILE_AABB, Play::cGreen);
-	}
 
 	std::vector<int> vPlatformsBegin = Play::CollectGameObjectIDsByType(TYPE_PLATFORM_BEGIN);
 	for (int i : vPlatformsBegin)
@@ -275,6 +266,13 @@ void Draw()
 		//Play::DrawRect(platformEnd.pos - TILE_END_AABB - AABB_ORIGIN, platformEnd.pos + TILE_END_AABB - AABB_ORIGIN, Play::cOrange);
 	}
 
+	std::vector<int> vPlatformsMid = Play::CollectGameObjectIDsByType(TYPE_PLATFORM);
+	for (int i : vPlatformsMid)
+	{
+		GameObject& platformMid = Play::GetGameObject(i);
+		Play::DrawObject(platformMid);
+		//Play::DrawRect(platformMid.pos - TILE_AABB, platformMid.pos + TILE_AABB, Play::cGreen);
+	}
 
 	//draw lava
 	std::vector<int> vLavaMid = Play::CollectGameObjectIDsByType(TYPE_LAVA);
@@ -303,7 +301,7 @@ void Draw()
 	//draw pod
 	Play::DrawObject(Play::GetGameObjectByType(TYPE_POD));
 	GameObject& obj_pod{ Play::GetGameObjectByType(TYPE_POD) };
-	Play::DrawRect(obj_pod.pos - POD_AABB, obj_pod.pos + POD_AABB, Play::cWhite); // bounding box visual
+	//Play::DrawRect(obj_pod.pos - POD_AABB, obj_pod.pos + POD_AABB, Play::cWhite); // bounding box visual
 
 	DrawUI();
 
@@ -315,7 +313,7 @@ void DrawUI()
 	switch (gameState.playState)
 	{
 		case STATE_START:
-			Play::DrawFontText("64px", "COLLECT THE GOLD AND AVOID THE PANSIES",
+			Play::DrawFontText("64px", "COLLECT THE GOLD AND AVOID THE PANSIES AND WALLS",
 				{ DISPLAY_WIDTH / 2, 400 }, Play::CENTRE);
 			Play::DrawFontText("64px", "PRESS P TO PLAY",
 				{ DISPLAY_WIDTH / 2,  350 }, Play::CENTRE);
@@ -328,7 +326,7 @@ void DrawUI()
 
 		case STATE_WIN:
 			Play::DrawFontText("64px", "YOU WON! PLAY AGAIN? PRESS P TO PLAY AGAIN",
-				{ DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2 }, Play::CENTRE);
+				{ DISPLAY_WIDTH / 2, 50 }, Play::CENTRE);
 			break;
 
 		case STATE_GAMEOVER:
@@ -347,7 +345,6 @@ void UpdateFishPod()
 	switch (gameState.fishState)
 	{
 		case STATE_STAND:
-
 			FishPodStand();
 			WallCollision();
 
@@ -360,7 +357,7 @@ void UpdateFishPod()
 				gameState.fishState = STATE_FALL;
 			}
 
-			FishPodGroundControls();
+			FishPodMove();
 			LavaCollision();
 			WallCollision();
 			GoldCollision();
@@ -380,7 +377,7 @@ void UpdateFishPod()
 
 
 		case STATE_FALL:
-			obj_pod.acceleration.y = gravity;
+			FishPodFall();
 			RockPlatformCollision();
 			LavaCollision();
 			WallCollision();
@@ -398,30 +395,25 @@ void UpdateFishPod()
 	Play::UpdateGameObject(obj_pod);
 }
 
-void FishPodGroundControls()
+void FishPodMove()
 {
 	GameObject& obj_pod = Play::GetGameObjectByType(TYPE_POD);
 	obj_pod.velocity = { 0, 0 };
 	obj_pod.acceleration.y = 0;
 
 
-	if (RockPlatformCollision() == true)
+	if (Play::KeyDown(VK_LEFT))
 	{
-		if (Play::KeyDown(VK_LEFT))
-		{
-			obj_pod.pos.x -= 1;
-			Play::SetSprite(obj_pod, "pod_walk_left", 0.75f);
-		}
-
-		if (Play::KeyDown(VK_RIGHT))
-		{
-			obj_pod.pos.x += 1;
-			Play::SetSprite(obj_pod, "pod_walk_right", 0.75f);
-
-		}
+		obj_pod.pos.x -= 3;
+		Play::SetSprite(obj_pod, "pod_walk_left", 0.75f);
 	}
 
+	if (Play::KeyDown(VK_RIGHT))
+	{
+		obj_pod.pos.x += 3;
+		Play::SetSprite(obj_pod, "pod_walk_right", 0.75f);
 
+	}
 
 	if (!Play::KeyDown(VK_LEFT) && !Play::KeyDown(VK_RIGHT))
 	{
@@ -445,13 +437,23 @@ void FishPodJump()
 		Play::SetSprite(obj_pod, "pod_jump_right", 0.75f);
 	}
 
-	if (obj_pod.velocity.y > 0)
-	{
-		gameState.fishState = STATE_FALL;
-	}
 }
 
+void FishPodFall()
+{
+	GameObject& obj_pod = Play::GetGameObjectByType(TYPE_POD);
+	obj_pod.acceleration.y = gravity;
 
+	if (direction == facingLeft)
+	{
+		Play::SetSprite(obj_pod, "pod_fall_left", 0.75f);
+	}
+
+	if (direction == facingRight)
+	{
+		Play::SetSprite(obj_pod, "pod_fall_right", 0.75f);
+	}
+}
 
 void FishPodStand()
 {
@@ -523,6 +525,12 @@ bool RockPlatformCollision()
 					obj_pod.velocity = { 0,0 };
 					return true;
 				}
+
+				if (obj_pod.oldPos.y > obj_platform.pos.y == true)
+				{
+					obj_pod.velocity = { 0,0 };
+					gameState.fishState = STATE_FALL;
+				}
 			}
 			
 		}
@@ -546,6 +554,12 @@ bool RockPlatformCollision()
 					obj_pod.acceleration.y = 0;
 					obj_pod.velocity = { 0,0 };
 					return true;
+				}
+
+				if (obj_pod.oldPos.y > obj_platform_begin.pos.y == true)
+				{
+					obj_pod.velocity = { 0,0 };
+					gameState.fishState = STATE_FALL;
 				}
 			}
 
@@ -572,6 +586,13 @@ bool RockPlatformCollision()
 					obj_pod.velocity = { 0,0 };
 					return true;
 				}
+
+				if (obj_pod.oldPos.y > obj_platform_end.pos.y == true)
+				{
+					obj_pod.velocity = { 0,0 };
+					gameState.fishState = STATE_FALL;
+				}
+
 			}
 
 		}
@@ -671,8 +692,14 @@ bool GoldCollision()
 				&& obj_pod.pos.x - POD_AABB.x < obj_gold.pos.x + GOLD_AABB.x)
 			{
 					obj_gold.type = TYPE_DESTROYED;
+					gameState.gold -= 1;
 					Play::PlayAudio("gold");
 					Collision = true;
+
+					if (gameState.gold <= 0)
+					{
+						gameState.playState = STATE_WIN;
+					}
 			}
 
 		}
