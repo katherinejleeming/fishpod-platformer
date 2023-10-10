@@ -60,6 +60,9 @@ enum GameObjectType
 	TYPE_PLATFORM_BEGIN,
 	TYPE_PLATFORM,
 	TYPE_PLATFORM_END,
+	TYPE_LAVA_BEGIN,
+	TYPE_LAVA,
+	TYPE_LAVA_END,
 	TYPE_GOLD,
 	TYPE_PANSY,
 	TYPE_DESTROYED,
@@ -135,7 +138,7 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 			switch (tileId)
 			{
 			case 1:
-				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "rock_begin");
+				Play::CreateGameObject(TYPE_PLATFORM_BEGIN, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "rock_begin");
 				break;
 
 			case 2:
@@ -143,19 +146,19 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 				break;
 
 			case 3:
-				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "rock_end");
+				Play::CreateGameObject(TYPE_PLATFORM_END, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "rock_end");
 				break;
 
 			case 4:
-				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "lava_begin");
+				Play::CreateGameObject(TYPE_LAVA_BEGIN, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "lava_begin");
 				break;
 
 			case 5:
-				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "lava_middle");
+				Play::CreateGameObject(TYPE_LAVA, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "lava_middle");
 				break;
 
 			case 6:
-				Play::CreateGameObject(TYPE_PLATFORM, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "lava_end");
+				Play::CreateGameObject(TYPE_LAVA_END, { (x * obj_tile.TILE_WIDTH) + 16, (y * obj_tile.TILE_HEIGHT) + 16 }, 10, "lava_end");
 				break;
 
 			case 7:
@@ -196,10 +199,10 @@ bool MainGameUpdate( float elapsedTime )
 			RockPlatformCollision();
 			if (Play::KeyPressed('P') == true)
 			{
-				obj_pod.pos = { POD_START_POS };
 				gameState.playState = STATE_PLAY;
 				gameState.fishState = STATE_MOVE;
-				//Play::StartAudioLoop("thunder");
+				obj_pod.pos = { POD_START_POS };
+				Play::StartAudioLoop("thunder");
 			}
 
 			break;
@@ -222,7 +225,7 @@ bool MainGameUpdate( float elapsedTime )
 
 		case STATE_GAMEOVER:
 			UpdateFishPod();
-
+			Play::StopAudioLoop("thunder");
 			if (Play::KeyPressed('R') == true)
 			{
 				gameState.playState = STATE_START;
@@ -258,21 +261,49 @@ void Draw()
 		Play::DrawRect(platformMid.pos - TILE_AABB, platformMid.pos + TILE_AABB, Play::cGreen);
 	}
 
-	//std::vector<int> vPlatformsBegin = Play::CollectGameObjectIDsByType(TYPE_PLATFORM_BEGIN);
-	//for (int i : vPlatformsBegin)
-	//{
-	//	GameObject& platformBegin = Play::GetGameObject(i);
-	//	Play::DrawObject(platformBegin);
-	//	Play::DrawRect(platformBegin.pos - TILE_BEGIN_AABB, platformBegin.pos + TILE_BEGIN_AABB, Play::cOrange);
-	//}
+	std::vector<int> vPlatformsBegin = Play::CollectGameObjectIDsByType(TYPE_PLATFORM_BEGIN);
+	for (int i : vPlatformsBegin)
+	{
+		GameObject& platformBegin = Play::GetGameObject(i);
+		Play::DrawObject(platformBegin);
+		Play::DrawRect(platformBegin.pos - TILE_BEGIN_AABB, platformBegin.pos + TILE_BEGIN_AABB, Play::cOrange);
+	}
 
-	//std::vector<int> vPlatformsEnd = Play::CollectGameObjectIDsByType(TYPE_PLATFORM_END);
-	//for (int i : vPlatformsEnd)
-	//{
-	//	GameObject& platformEnd = Play::GetGameObject(i);
-	//	Play::DrawObject(platformEnd);
-	//	Play::DrawRect(platformEnd.pos - TILE_END_AABB, platformEnd.pos + TILE_END_AABB, Play::cOrange);
-	//}
+	std::vector<int> vPlatformsEnd = Play::CollectGameObjectIDsByType(TYPE_PLATFORM_END);
+	for (int i : vPlatformsEnd)
+	{
+		GameObject& platformEnd = Play::GetGameObject(i);
+		Play::DrawObject(platformEnd);
+		Play::DrawRect(platformEnd.pos - TILE_END_AABB, platformEnd.pos + TILE_END_AABB, Play::cOrange);
+	}
+
+
+	//draw lava
+	std::vector<int> vLavaMid = Play::CollectGameObjectIDsByType(TYPE_LAVA);
+	for (int i : vLavaMid)
+	{
+		GameObject& lavaMid = Play::GetGameObject(i);
+		Play::DrawObject(lavaMid);
+		Play::DrawRect(lavaMid.pos - TILE_AABB, lavaMid.pos + TILE_AABB, Play::cGreen);
+	}
+
+	std::vector<int> vlavaBegin = Play::CollectGameObjectIDsByType(TYPE_LAVA_BEGIN);
+	for (int i : vlavaBegin)
+	{
+		GameObject& lavaBegin = Play::GetGameObject(i);
+		Play::DrawObject(lavaBegin);
+		Play::DrawRect(lavaBegin.pos - TILE_BEGIN_AABB, lavaBegin.pos + TILE_BEGIN_AABB, Play::cOrange);
+	}
+
+	std::vector<int> vlavaEnd = Play::CollectGameObjectIDsByType(TYPE_LAVA_END);
+	for (int i : vlavaEnd)
+	{
+		GameObject& lavaEnd = Play::GetGameObject(i);
+		Play::DrawObject(lavaEnd);
+		Play::DrawRect(lavaEnd.pos - TILE_END_AABB, lavaEnd.pos + TILE_END_AABB, Play::cOrange);
+	}
+
+
 
 	//draw other objs
 	std::vector<int> pansy_id = Play::CollectGameObjectIDsByType(TYPE_PANSY);
@@ -280,7 +311,6 @@ void Draw()
 	{
 		GameObject& pansy = Play::GetGameObject(j);
 		Play::DrawObject(pansy);
-		Play::DrawRect(pansy.pos - PANSY_AABB, pansy.pos + PANSY_AABB, Play::cBlue);
 	}
 
 	std::vector<int> gold_id = Play::CollectGameObjectIDsByType(TYPE_GOLD);
@@ -288,7 +318,6 @@ void Draw()
 	{
 		GameObject& gold = Play::GetGameObject(k);
 		Play::DrawObject(gold);
-		Play::DrawRect(gold.pos - GOLD_AABB, gold.pos + GOLD_AABB, Play::cRed);
 	}
 
 	//draw pod
@@ -315,8 +344,6 @@ void DrawUI()
 		case STATE_PLAY:
 			Play::DrawFontText("64px", "LEFT AND RIGHT TO MOVE, SPACE TO JUMP",
 					{ DISPLAY_WIDTH / 2,  50 }, Play::CENTRE);
-			Play::DrawFontText("64px", "Collision: " + std::to_string(gameState.collision),
-					{ 100,  DISPLAY_HEIGHT / 2 }, Play::CENTRE);
 			break;
 
 		case STATE_WIN:
@@ -396,14 +423,14 @@ void FishPodGroundControls()
 
 	if (Play::KeyDown(VK_LEFT))
 	{
-		obj_pod.velocity.x -= 1;
-		Play::SetSprite(obj_pod, "pod_walk_left", 0.25f);
+		obj_pod.pos.x -= 1;
+		Play::SetSprite(obj_pod, "pod_walk_left", 0.75f);
 	}
 
 	if (Play::KeyDown(VK_RIGHT))
 	{
-		obj_pod.velocity.x += 1;
-		Play::SetSprite(obj_pod, "pod_walk_right", 0.25f);
+		obj_pod.pos.x += 1;
+		Play::SetSprite(obj_pod, "pod_walk_right", 0.75f);
 
 	}
 
@@ -486,7 +513,6 @@ void FishPodStand()
 
 bool RockPlatformCollision()
 {
-	//Vector2D AABB { 0,0 };
 	GameObject& obj_pod(Play::GetGameObjectByType(TYPE_POD));
 	std::vector<int> vPlatforms = Play::CollectGameObjectIDsByType(TYPE_PLATFORM);
 
@@ -514,6 +540,34 @@ bool RockPlatformCollision()
 	return false;
 }
 
+bool LavaPlatformCollision()
+{
+	GameObject& obj_pod(Play::GetGameObjectByType(TYPE_POD));
+	std::vector<int> vPlatforms = Play::CollectGameObjectIDsByType(TYPE_LAVA);
+
+	for (int i : vPlatforms)
+	{
+		GameObject& obj_platform = Play::GetGameObject(i);
+
+		if (obj_pod.pos.y + POD_AABB.y > obj_platform.pos.y - TILE_AABB.y
+			&& obj_pod.pos.y - POD_AABB.y < obj_platform.pos.y + TILE_AABB.y)
+		{
+
+			if (obj_pod.pos.x - POD_AABB.x < obj_platform.pos.x + TILE_AABB.x
+				&& obj_pod.pos.x + POD_AABB.x > obj_platform.pos.x - TILE_AABB.x)
+			{
+				gameState.fishState = STATE_DEAD;
+				Play::PlayAudio("die");
+				return true;
+			}
+
+		}
+
+	}
+
+	return false;
+}
+
 bool PansyCollision()
 {
 	GameObject& obj_pod(Play::GetGameObjectByType(TYPE_POD));
@@ -523,15 +577,15 @@ bool PansyCollision()
 	{
 		GameObject& obj_pansy = Play::GetGameObject(i);
 
-
 		if (obj_pod.pos.y + POD_AABB.y > obj_pansy.pos.y - PANSY_AABB.y
 			&& obj_pod.pos.y - POD_AABB.y < obj_pansy.pos.y + PANSY_AABB.y)
 		{
 			if (obj_pod.pos.x + POD_AABB.x > obj_pansy.pos.x - PANSY_AABB.x
 				&& obj_pod.pos.x - POD_AABB.x < obj_pansy.pos.x + PANSY_AABB.x)
 			{
-				gameState.playState = STATE_GAMEOVER;
+				gameState.fishState = STATE_DEAD;
 				Play::PlayAudio("die");
+				return true;
 				
 			}
 
@@ -595,12 +649,14 @@ void WallCollision()
 	if (obj_pod.pos.x < 0 || obj_pod.pos.x > DISPLAY_WIDTH)
 	{
 		obj_pod.pos.x = std::clamp(obj_pod.pos.x, 0.f, (float) DISPLAY_WIDTH);
+		Play::PlayAudio("die");
 		gameState.fishState = STATE_DEAD;
 	}
 
 	if (obj_pod.pos.y > DISPLAY_HEIGHT)
 	{
 		obj_pod.pos.y = std::clamp(obj_pod.pos.y, 0.f, (float) DISPLAY_HEIGHT);
+		Play::PlayAudio("die");
 		gameState.fishState = STATE_DEAD;
 
 	}
