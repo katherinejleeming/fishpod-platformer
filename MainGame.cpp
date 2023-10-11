@@ -66,7 +66,7 @@ enum GameObjectType
 	TYPE_LAVA,
 	TYPE_GOLD,
 	TYPE_PANSY,
-	TYPE_DESTROYED,
+	TYPE_INACTIVE,
 };
 
 
@@ -213,7 +213,6 @@ bool MainGameUpdate( float elapsedTime )
 			PansyCollision();
 			LavaCollision();
 			WallCollision();
-			UpdateDestroyed();
 			break;
 
 		case STATE_WIN:
@@ -235,6 +234,7 @@ bool MainGameUpdate( float elapsedTime )
 			{
 				obj_pod.pos = { POD_START_POS };
 				gameState.playState = STATE_START;
+				gameState.gold = 5;
 			}
 
 			break;
@@ -676,6 +676,12 @@ void GoldUpdate()
 	{
 		GameObject& obj_gold = Play::GetGameObject(i);
 		Play::SetSprite(obj_gold, "gold", 0.25f);
+
+			if (gameState.playState == STATE_GAMEOVER && (Play::KeyPressed('R') == true))
+			{
+				obj_gold.type = TYPE_GOLD;
+			}
+
 		Play::UpdateGameObject(obj_gold);
 	}
 }
@@ -698,7 +704,7 @@ bool GoldCollision()
 			if (obj_pod.pos.x + POD_AABB.x > obj_gold.pos.x - GOLD_AABB.x 
 				&& obj_pod.pos.x - POD_AABB.x < obj_gold.pos.x + GOLD_AABB.x)
 			{
-					obj_gold.type = TYPE_DESTROYED;
+					obj_gold.type = TYPE_INACTIVE;
 					gameState.gold -= 1;
 					Play::PlayAudio("gold");
 					Collision = true;
@@ -736,23 +742,5 @@ void WallCollision()
 		Play::PlayAudio("die");
 		gameState.fishState = STATE_DEAD;
 
-	}
-}
-
-void UpdateDestroyed()
-{
-	std::vector<int> vDead = Play::CollectGameObjectIDsByType(TYPE_DESTROYED);
-
-	for (int id_dead : vDead)
-	{
-		GameObject& obj_dead = Play::GetGameObject(id_dead);
-		obj_dead.animSpeed = 0.2f;
-		Play::UpdateGameObject(obj_dead);
-
-		if (obj_dead.frame % 2)
-			Play::DrawObjectRotated(obj_dead, (10 - obj_dead.frame) / 10.0f);
-
-		if (!Play::IsVisible(obj_dead) || obj_dead.frame >= 10)
-			Play::DestroyGameObject(id_dead);
 	}
 }
