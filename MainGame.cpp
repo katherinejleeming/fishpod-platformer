@@ -216,6 +216,14 @@ bool MainGameUpdate( float elapsedTime )
 
 		case STATE_WIN:
 			Play::StopAudioLoop("thunder");
+			if (Play::KeyPressed('P') == true)
+			{
+				gameState.playState = STATE_PLAY;
+				gameState.fishState = STATE_FALL;
+				obj_pod.velocity = { 0,0 };
+				Play::StartAudioLoop("thunder");
+			}
+
 			break;
 
 		case STATE_GAMEOVER:
@@ -255,7 +263,7 @@ void Draw()
 	{
 		GameObject& platformBegin = Play::GetGameObject(i);
 		Play::DrawObject(platformBegin);
-		//Play::DrawRect(platformBegin.pos - TILE_BEGIN_AABB + AABB_ORIGIN, platformBegin.pos + TILE_BEGIN_AABB + AABB_ORIGIN, Play::cOrange);
+		//Play::DrawRect(platformBegin.pos - TILE_BEGIN_AABB + AABB_ORIGIN, platformBegin.pos + TILE_BEGIN_AABB + AABB_ORIGIN, Play::cOrange); // bounding box visual
 	}
 
 	std::vector<int> vPlatformsEnd = Play::CollectGameObjectIDsByType(TYPE_PLATFORM_END);
@@ -263,7 +271,7 @@ void Draw()
 	{
 		GameObject& platformEnd = Play::GetGameObject(i);
 		Play::DrawObject(platformEnd);
-		//Play::DrawRect(platformEnd.pos - TILE_END_AABB - AABB_ORIGIN, platformEnd.pos + TILE_END_AABB - AABB_ORIGIN, Play::cOrange);
+		//Play::DrawRect(platformEnd.pos - TILE_END_AABB - AABB_ORIGIN, platformEnd.pos + TILE_END_AABB - AABB_ORIGIN, Play::cOrange); // bounding box visual
 	}
 
 	std::vector<int> vPlatformsMid = Play::CollectGameObjectIDsByType(TYPE_PLATFORM);
@@ -271,7 +279,7 @@ void Draw()
 	{
 		GameObject& platformMid = Play::GetGameObject(i);
 		Play::DrawObject(platformMid);
-		//Play::DrawRect(platformMid.pos - TILE_AABB, platformMid.pos + TILE_AABB, Play::cGreen);
+		//Play::DrawRect(platformMid.pos - TILE_AABB, platformMid.pos + TILE_AABB, Play::cGreen); // bounding box visual
 	}
 
 	//draw lava
@@ -280,7 +288,7 @@ void Draw()
 	{
 		GameObject& lavaMid = Play::GetGameObject(i);
 		Play::DrawObject(lavaMid);
-		//Play::DrawRect(lavaMid.pos - TILE_AABB, lavaMid.pos + TILE_AABB, Play::cGreen);
+		//Play::DrawRect(lavaMid.pos - TILE_AABB, lavaMid.pos + TILE_AABB, Play::cGreen); // bounding box visual
 	}
 
 	//draw other objs
