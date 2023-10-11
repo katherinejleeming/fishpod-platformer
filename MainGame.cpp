@@ -412,13 +412,13 @@ void FishPodMove()
 
 	if (Play::KeyDown(VK_LEFT))
 	{
-		obj_pod.pos.x -= 3;
+		obj_pod.pos.x -= 2;
 		Play::SetSprite(obj_pod, "pod_walk_left", 0.75f);
 	}
 
 	if (Play::KeyDown(VK_RIGHT))
 	{
-		obj_pod.pos.x += 3;
+		obj_pod.pos.x += 2;
 		Play::SetSprite(obj_pod, "pod_walk_right", 0.75f);
 
 	}
@@ -528,7 +528,7 @@ bool RockPlatformCollision()
 			{
 				if (obj_pod.pos.y < obj_platform.pos.y == true)
 				{
-					gameState.fishState = STATE_STAND;
+					gameState.fishState = STATE_MOVE;
 					obj_pod.acceleration.y = 0;
 					obj_pod.velocity = { 0,0 };
 					return true;
@@ -558,7 +558,7 @@ bool RockPlatformCollision()
 			{
 				if (obj_pod.pos.y < obj_platform_begin.pos.y == true)
 				{
-					gameState.fishState = STATE_STAND;
+					gameState.fishState = STATE_MOVE;
 					obj_pod.acceleration.y = 0;
 					obj_pod.velocity = { 0,0 };
 					return true;
@@ -589,7 +589,7 @@ bool RockPlatformCollision()
 			{
 				if (obj_pod.pos.y < obj_platform_end.pos.y == true)
 				{
-					gameState.fishState = STATE_STAND;
+					gameState.fishState = STATE_MOVE;
 					obj_pod.acceleration.y = 0;
 					obj_pod.velocity = { 0,0 };
 					return true;
