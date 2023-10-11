@@ -90,7 +90,7 @@ FishPod fishpod;
 struct GameState
 {
 	float time{ 0 };
-	float gold{ 4 };
+	float gold{ 5 };
 	bool collision{ false };
 	PlayState playState{ STATE_START };
 	FishPodState fishState{ STATE_STAND };
@@ -208,9 +208,11 @@ bool MainGameUpdate( float elapsedTime )
 
 		case STATE_PLAY:
 			UpdateFishPod();
-			PansyCollision();
 			GoldUpdate();
 			GoldCollision();
+			PansyCollision();
+			LavaCollision();
+			WallCollision();
 			UpdateDestroyed();
 			break;
 
@@ -227,7 +229,7 @@ bool MainGameUpdate( float elapsedTime )
 			break;
 
 		case STATE_GAMEOVER:
-			//UpdateFishPod();
+			LavaCollision();
 			Play::StopAudioLoop("thunder");
 			if (Play::KeyPressed('R') == true)
 			{
@@ -354,7 +356,6 @@ void UpdateFishPod()
 	{
 		case STATE_STAND:
 			FishPodStand();
-			WallCollision();
 
 			break;
 
@@ -364,40 +365,32 @@ void UpdateFishPod()
 			{
 				gameState.fishState = STATE_FALL;
 			}
-
 			FishPodMove();
-			LavaCollision();
-			WallCollision();
-			GoldCollision();
 
 			break;
 
 		case STATE_JUMP:
+			obj_pod.acceleration.y = gravity;
+
 			if (RockPlatformCollision() == false)
 			{
 				Play::PlayAudio("splash");
 			}
-			obj_pod.acceleration.y = gravity;
+
 			LavaCollision();
 			RockPlatformCollision();
 			FishPodJump();
-			WallCollision();
-			GoldCollision();
-
+		
 			break;
 
 
 		case STATE_FALL:
 			FishPodFall();
 			RockPlatformCollision();
-			LavaCollision();
-			WallCollision();
-			GoldCollision();
-
+		
 			break;
 
 		case STATE_DEAD:
-			LavaCollision();
 			gameState.playState = STATE_GAMEOVER;
 
 			break;
