@@ -113,7 +113,7 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0,0,7,0,8,0,0,7,0,0,0,0,0,0,0,0,0,0,
-		0,0,1,2,2,3,0,0,0,1,2,2,2,2,2,2,2,3,0,0,0,0,0,7,0,0,
+		0,0,1,2,2,3,0,0,0,1,2,2,2,2,2,2,2,3,0,0,0,8,0,7,0,0,
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,2,2,3,0,
 		0,0,0,0,0,0,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,1,2,2,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -412,14 +412,16 @@ void FishPodMove()
 
 	if (Play::KeyDown(VK_LEFT))
 	{
-		obj_pod.pos.x -= 2;
+		obj_pod.pos.x -= 1;
 		Play::SetSprite(obj_pod, "pod_walk_left", 0.75f);
+		
 	}
 
 	if (Play::KeyDown(VK_RIGHT))
 	{
-		obj_pod.pos.x += 2;
+		obj_pod.pos.x += 1;
 		Play::SetSprite(obj_pod, "pod_walk_right", 0.75f);
+		
 
 	}
 
@@ -529,6 +531,7 @@ bool RockPlatformCollision()
 				if (obj_pod.pos.y < obj_platform.pos.y == true)
 				{
 					gameState.fishState = STATE_MOVE;
+					Play::PlayAudio("splash");
 					obj_pod.acceleration.y = 0;
 					obj_pod.velocity = { 0,0 };
 					return true;
@@ -559,6 +562,7 @@ bool RockPlatformCollision()
 				if (obj_pod.pos.y < obj_platform_begin.pos.y == true)
 				{
 					gameState.fishState = STATE_MOVE;
+					Play::PlayAudio("splash");
 					obj_pod.acceleration.y = 0;
 					obj_pod.velocity = { 0,0 };
 					return true;
@@ -590,6 +594,7 @@ bool RockPlatformCollision()
 				if (obj_pod.pos.y < obj_platform_end.pos.y == true)
 				{
 					gameState.fishState = STATE_MOVE;
+					Play::PlayAudio("splash");
 					obj_pod.acceleration.y = 0;
 					obj_pod.velocity = { 0,0 };
 					return true;
