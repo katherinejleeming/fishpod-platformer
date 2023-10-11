@@ -24,7 +24,7 @@ const Vector2D POD_AABB{ 10.f, 16.f };
 const Vector2D PANSY_AABB{ 10.f, 15.f };
 const Vector2D GOLD_AABB{ 14.f, 14.f };
 
-void Draw();
+void Draw(); 
 void DrawUI();
 void UpdateFishPod();
 void FishPodMove();
@@ -373,7 +373,10 @@ void UpdateFishPod()
 			break;
 
 		case STATE_JUMP:
-
+			if (RockPlatformCollision() == false)
+			{
+				Play::PlayAudio("splash");
+			}
 			obj_pod.acceleration.y = gravity;
 			LavaCollision();
 			RockPlatformCollision();
@@ -414,6 +417,7 @@ void FishPodMove()
 	{
 		obj_pod.pos.x -= 1;
 		Play::SetSprite(obj_pod, "pod_walk_left", 0.75f);
+		Play::PlayAudio("walk");
 		
 	}
 
@@ -421,7 +425,7 @@ void FishPodMove()
 	{
 		obj_pod.pos.x += 1;
 		Play::SetSprite(obj_pod, "pod_walk_right", 0.75f);
-		
+		Play::PlayAudio("walk");
 
 	}
 
@@ -531,7 +535,6 @@ bool RockPlatformCollision()
 				if (obj_pod.pos.y < obj_platform.pos.y == true)
 				{
 					gameState.fishState = STATE_MOVE;
-					Play::PlayAudio("splash");
 					obj_pod.acceleration.y = 0;
 					obj_pod.velocity = { 0,0 };
 					return true;
@@ -562,7 +565,6 @@ bool RockPlatformCollision()
 				if (obj_pod.pos.y < obj_platform_begin.pos.y == true)
 				{
 					gameState.fishState = STATE_MOVE;
-					Play::PlayAudio("splash");
 					obj_pod.acceleration.y = 0;
 					obj_pod.velocity = { 0,0 };
 					return true;
@@ -594,7 +596,6 @@ bool RockPlatformCollision()
 				if (obj_pod.pos.y < obj_platform_end.pos.y == true)
 				{
 					gameState.fishState = STATE_MOVE;
-					Play::PlayAudio("splash");
 					obj_pod.acceleration.y = 0;
 					obj_pod.velocity = { 0,0 };
 					return true;
